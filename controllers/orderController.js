@@ -33,7 +33,49 @@ exports.createOrder = catchAsyncErrors(async (req, res, next) => {
         success: true
     })
 });
-
+const startOrderHelper = async (nop , apiRequestBody , id)=>{
+    for(let i=2; i<=nop+1;i++){
+        console.log(i);
+        apiRequestBody.page = i;
+        let arb = {
+            q_keywords : apiRequestBody.q_keywords,
+            page : apiRequestBody.page,
+            per_page : apiRequestBody.per_page,
+            person_titles : apiRequestBody.person_titles,
+            person_seniorities : apiRequestBody.person_seniorities,
+            contact_email_status : apiRequestBody.contact_email_status,
+            q_organization_domains : apiRequestBody.q_organization_domains,
+            organisation_num_employees_ranges : apiRequestBody.organisation_num_employees_ranges,
+            organisation_id : apiRequestBody.organisation_id,
+        }
+        let link = "https://api.apollo.io/v1/mixed_people/search"; 
+        const result = await fetch(link , {
+            method : "POST",
+            // mode : "cors",
+            headers : {
+              "Content-Type":"application/json",
+              "X-Api-Key":"ByIN6wgmPzSvjSYFP7alvQ"
+            },
+            redirect:"follow",
+            body: JSON.stringify(arb),
+        }).then(response => response.json()).then(async (response) => {
+            const people = response.people;
+            console.log("PPL : ", people.length);
+            const _order = await orderModal.findById(id);
+            let data = _order.data;
+            //push people in data
+            for(let i=0; i<people.length;i++){
+                data.push(people[i]);
+            }
+            const _order_ = await orderModal.findByIdAndUpdate(id, {data:data}, {
+                runValidators: true,
+                useFindAndModify: false,
+            });
+        }).catch(error => {
+            console.error(error);
+        });
+    }
+}
 exports.startOrder = catchAsyncErrors(async (req, res, next) => {
     const order = await orderModal.findById(req.body.id);
     console.log(order);
@@ -73,47 +115,7 @@ exports.startOrder = catchAsyncErrors(async (req, res, next) => {
     let nol = order.noOfLeads;
     let pp = apiRequestBody.per_page;
     let nop = nol/pp;
-    for(let i=2; i<=nop+1;i++){
-        console.log(i);
-        apiRequestBody.page = i;
-        let arb = {
-            q_keywords : apiRequestBody.q_keywords,
-            page : apiRequestBody.page,
-            per_page : apiRequestBody.per_page,
-            person_titles : apiRequestBody.person_titles,
-            person_seniorities : apiRequestBody.person_seniorities,
-            contact_email_status : apiRequestBody.contact_email_status,
-            q_organization_domains : apiRequestBody.q_organization_domains,
-            organisation_num_employees_ranges : apiRequestBody.organisation_num_employees_ranges,
-            organisation_id : apiRequestBody.organisation_id,
-        }
-        let link = "https://api.apollo.io/v1/mixed_people/search"; 
-        const result = await fetch(link , {
-            method : "POST",
-            // mode : "cors",
-            headers : {
-              "Content-Type":"application/json",
-              "X-Api-Key":"ByIN6wgmPzSvjSYFP7alvQ"
-            },
-            redirect:"follow",
-            body: JSON.stringify(arb),
-        }).then(response => response.json()).then(async (response) => {
-            const people = response.people;
-            console.log("PPL : ", people.length);
-            const _order = await orderModal.findById(req.body.id);
-            let data = _order.data;
-            //push people in data
-            for(let i=0; i<people.length;i++){
-                data.push(people[i]);
-            }
-            const _order_ = await orderModal.findByIdAndUpdate(req.body.id, {data:data}, {
-                runValidators: true,
-                useFindAndModify: false,
-            });
-        }).catch(error => {
-            console.error(error);
-        });
-    }
+    startOrderHelper(nop , apiRequestBody,req.body.id)
     res.status(201).json({
         success: true
     })
