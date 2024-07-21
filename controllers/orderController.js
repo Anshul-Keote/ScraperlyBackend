@@ -2,6 +2,7 @@ const ErrorHandler = require("../utils/errorhandler");
 const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const ApiFeatures = require("../utils/apiFeatures");
 const orderModal = require("../models/orderModal");
+const responseParser = require("../utils/responseParser");
 
 
 exports.createOrder = catchAsyncErrors(async (req, res, next) => {
@@ -60,12 +61,13 @@ const startOrderHelper = async (nop , apiRequestBody , id)=>{
             body: JSON.stringify(arb),
         }).then(response => response.json()).then(async (response) => {
             const people = response.people;
-            console.log("PPL : ", people.length);
+            const filtered_people = await responseParser(people);
+            console.log("PPL : ", filtered_people.length);
             const _order = await orderModal.findById(id);
             let data = _order.data;
             //push people in data
-            for(let i=0; i<people.length;i++){
-                data.push(people[i]);
+            for(let i=0; i<filtered_people.length;i++){
+                data.push(filtered_people[i]);
             }
             const _order_ = await orderModal.findByIdAndUpdate(id, {data:data}, {
                 runValidators: true,

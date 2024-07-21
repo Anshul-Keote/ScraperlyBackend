@@ -1,2 +1,2 @@
-# Scraperly-Server
-Server Component of Scraperly
+# bhartiyakanoon-Server
+Server Component of Bhartiya Kanoon
