@@ -61,7 +61,7 @@ const startOrderHelper = async (nop , apiRequestBody , id)=>{
             body: JSON.stringify(arb),
         }).then(response => response.json()).then(async (response) => {
             const people = response.people;
-            const filtered_people = await responseParser(people);
+            const filtered_people = await responseParser(people , id);
             console.log("PPL : ", filtered_people.length);
             const _order = await orderModal.findById(id);
             let data = _order.data;
