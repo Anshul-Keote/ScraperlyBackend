@@ -34,7 +34,7 @@ let org_fields_to_remove = {
 }
 
 const verifyEmail = async (email, personId , orderId)=>{
-    const link = `https://api.mails.so/v1/validate?email=${email}`;
+    const link = `http://api.mails.so/v1/validate?email=${email}`;
     const processedEmail = {
         email:email,
         score:0,
