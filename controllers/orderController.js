@@ -3,7 +3,10 @@ const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const ApiFeatures = require("../utils/apiFeatures");
 const orderModal = require("../models/orderModal");
 const responseParser = require("../utils/responseParser");
-
+const emailModal = require("../models/emailModal");
+const converter = require("json-2-csv");
+const fs = require('node:fs');
+const path = require('node:path');
 
 exports.createOrder = catchAsyncErrors(async (req, res, next) => {
     const fieldsObj = req.body.data.fields;
@@ -119,6 +122,94 @@ exports.startOrder = catchAsyncErrors(async (req, res, next) => {
     let pp = apiRequestBody.per_page;
     let nop = nol/pp;
     startOrderHelper(nop , apiRequestBody,req.body.id)
+    res.status(201).json({
+        success: true
+    })
+});
+
+const generateCSVHelper = async (id)=>{
+    const iniTime = Date.now();
+    const order = await orderModal.findById(id);
+    let dataLen = order.data.length;
+    let org_fetch_queue = []
+    let organisations = {}
+    const result = [
+    ]
+
+    for(let i=0; i<dataLen; i++){
+        const resultDoc = {
+            id : order.data[i].id,
+            first_name : order.data[i].first_name,
+            last_name : order.data[i].last_name,
+            title: order.data[i].title,
+            city : order.data[i].city,
+            state : order.data[i].state,
+            country : order.data[i].country,
+            linkedin_url : order.data[i].linkedin_url,
+            headline : order.data[i].headline,
+            organization_domain : order.data[i].organization.primary_domain,
+            organization_name : order.data[i].organization.name,
+            organization_founded_year : order.data[i].organization.founded_year,
+            organization_phone : order.data[i].organization.phone,
+            organization_facebook_url : order.data[i].organization.facebook_url,
+            organization_linkedin_url : order.data[i].organization.linkedin_url,
+            organization_website_url : order.data[i].organization.website_url,
+            organization_twitter_url : order.data[i].organization.twitter_url,
+            organization_angellist_url : order.data[i].organization.angellist_url,
+            email : "",
+            status : false,
+            ESP:""
+        }
+        const emails = await emailModal.find({personId:order.data[i].id,orderId:id});
+        let max_score = 0;
+        for(let j=0; j<emails.length;j++){
+            if(emails[j].score >= max_score){
+                resultDoc.email = emails[j].email;
+                resultDoc.status = emails[j].score >= 60 ? true : false;
+                resultDoc.ESP = emails[j].ESP ? emails[j].ESP : null;
+                max_score = emails[j].score;
+            }
+        }
+        // if(org_fetch_queue.length < 100){
+        //     org_fetch_queue.push(order.data[i].organization.id);
+        // }else{
+        //     let link = "https://api.apollo.io/api/v1/mixed_companies/search";
+        //     const result = await fetch(link , {
+        //         method : "POST",
+        //         headers : {
+        //           "Content-Type":"application/json",
+        //           "X-Api-Key":"ByIN6wgmPzSvjSYFP7alvQ"
+        //         },
+        //         redirect:"follow",
+        //         body: JSON.stringify({per_page:100,organization_ids:org_fetch_queue}),
+        //     }).then(response => response.json()).then(response => response.organizations).then(async(response)=>{
+        //         for(let k=0; k<response.length; k++){
+        //             organisations[response[k].id] = response[k];
+        //         }
+        //     }).catch(error => {
+        //         console.error(error);
+        //     });
+        //     org_fetch_queue = [];
+        //     org_fetch_queue.push(order.data[i].organization.id);
+        // }
+        // console.log(`${i} , ${organisations.length} , ${org_fetch_queue.length}`);
+        console.log(`${i}`);
+        result.push(resultDoc);
+    }
+    const csv = await converter.json2csv(result);
+    fs.writeFile(`${id}.csv`,csv,(err)=>{
+        if(err){
+            console.error(err);
+        }else{
+            console.log("File Written Successfully");
+        }
+    });
+    const compTime = Date.now();
+    console.log(`Generated CSV in ${compTime - iniTime} seconds`);
+}
+
+exports.generateCSV = catchAsyncErrors(async (req, res, next) => {
+    generateCSVHelper(req.body.id);
     res.status(201).json({
         success: true
     })
