@@ -7,6 +7,7 @@ const emailModal = require("../models/emailModal");
 const converter = require("json-2-csv");
 const fs = require('node:fs');
 const path = require('node:path');
+const batchEmailVerifier = require("../utils/batchEmailVerifier");
 
 exports.createOrder = catchAsyncErrors(async (req, res, next) => {
     const fieldsObj = req.body.data.fields;
@@ -38,6 +39,7 @@ exports.createOrder = catchAsyncErrors(async (req, res, next) => {
     })
 });
 const startOrderHelper = async (nop , apiRequestBody , id)=>{
+    let verifyQueue = [];
     for(let i=2; i<=nop+1;i++){
         console.log(i);
         apiRequestBody.page = i;
@@ -63,7 +65,18 @@ const startOrderHelper = async (nop , apiRequestBody , id)=>{
             redirect:"follow",
             body: JSON.stringify(arb),
         }).then(response => response.json()).then(response => response.people).then(async(response)=>{
-            const filtered_people = await responseParser(response , id);
+            const filtered_people = await responseParser(response);
+            for(let j=0; j<filtered_people.length; j++){
+                if(filtered_people[j].possibleEmails){
+                    if(verifyQueue.length < 4800){
+                        verifyQueue.push(...filtered_people[j].possibleEmails);
+                    }else{
+                        batchEmailVerifier(verifyQueue);
+                        verifyQueue = [];
+                        verifyQueue.push(...filtered_people[j].possibleEmails);
+                    }
+                }
+            }
             return filtered_people;
         }).then(async (filtered_people) => {
             console.log("PPL : ", filtered_people.length);
@@ -80,6 +93,10 @@ const startOrderHelper = async (nop , apiRequestBody , id)=>{
         }).catch(error => {
             console.error(error);
         });
+    }
+    if(verifyQueue.length != 0){
+        batchEmailVerifier(verifyQueue);
+        verifyQueue = [];
     }
 }
 exports.startOrder = catchAsyncErrors(async (req, res, next) => {
@@ -127,7 +144,7 @@ exports.startOrder = catchAsyncErrors(async (req, res, next) => {
     })
 });
 
-const generateCSVHelper = async (id)=>{
+const generateCSVHelper = catchAsyncErrors(async (id)=>{
     const iniTime = Date.now();
     const order = await orderModal.findById(id);
     let dataLen = order.data.length;
@@ -137,6 +154,9 @@ const generateCSVHelper = async (id)=>{
     ]
 
     for(let i=0; i<dataLen; i++){
+        if(!order.data[i].organization){
+            continue;
+        }
         const resultDoc = {
             id : order.data[i].id,
             first_name : order.data[i].first_name,
@@ -206,7 +226,7 @@ const generateCSVHelper = async (id)=>{
     });
     const compTime = Date.now();
     console.log(`Generated CSV in ${compTime - iniTime} seconds`);
-}
+});
 
 exports.generateCSV = catchAsyncErrors(async (req, res, next) => {
     generateCSVHelper(req.body.id);

@@ -33,40 +33,7 @@ let org_fields_to_remove = {
     sanitized_phone:true
 }
 
-const verifyEmail = async (email, personId , orderId)=>{
-    const link = `http://api.mails.so/v1/validate?email=${email}`;
-    const processedEmail = {
-        email:email,
-        score:0,
-        personId:personId,
-        orderId:orderId,
-        error:false,
-    }
-    const result = await fetch(link , {
-        method : "GET",
-        headers : {
-          "Content-Type":"application/json",
-          "x-mails-api-key":"4ab9daeb-3024-4f2a-a967-4b49eab706f6"
-        },
-        redirect:"follow",
-    }).then(response => response.json()).then(async (response) => {
-        processedEmail.score = response.data.score;
-        console.log(processedEmail);
-    }).catch(error => {
-        console.log(error)
-        processedEmail.error = true;
-    });
-    const _email_ = await emailModal.create(processedEmail);
-}
-
-const batchEmailVerify = async (emails , personId , orderId)=>{
-    let noe = emails.length;
-    for(let i=0; i<noe; i++){
-        verifyEmail(emails[i] , personId , orderId);
-    }
-}
-
-const responseParser = async (people , orderId)=>{
+const responseParser = async (people)=>{
     let filtered_people_array = [];
     let people_len = people.length;
     for(let ppl_id = 0; ppl_id < people_len; ppl_id++){
@@ -102,7 +69,7 @@ const responseParser = async (people , orderId)=>{
         }
         if(filtered_person.organization){
             let possible_emails = permutator(filtered_person.first_name , filtered_person.last_name , filtered_person.organization.primary_domain);
-            batchEmailVerify(possible_emails , filtered_person.id , orderId);
+            filtered_person.possibleEmails = possible_emails;
         }
         filtered_people_array.push(filtered_person);
     }

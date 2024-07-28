@@ -9,19 +9,11 @@ const emailSchema = new mongoose.Schema({
         type:Number,
         required:true,
     },
-    orderId:{
-        type:mongoose.Schema.ObjectId,
-        ref:"Orders",
-        required:true
+    mx_record:{
+        type:String,
+        required:true,
+        default:"None"
     },
-    personId:{
-        type:mongoose.Schema.ObjectId,
-        required:true
-    },
-    error:{
-        type:Boolean,
-        require:true
-    }
 });
 
 module.exports = mongoose.model("Emails", emailSchema);
