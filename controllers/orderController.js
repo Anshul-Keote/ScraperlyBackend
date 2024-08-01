@@ -8,6 +8,7 @@ const converter = require("json-2-csv");
 const fs = require('node:fs');
 const path = require('node:path');
 const batchEmailVerifier = require("../utils/batchEmailVerifier");
+const peopleModal = require("../models/peopleModal");
 
 exports.createOrder = catchAsyncErrors(async (req, res, next) => {
     const fieldsObj = req.body.data.fields;
@@ -66,9 +67,11 @@ const startOrderHelper = async (nop , apiRequestBody , id)=>{
             body: JSON.stringify(arb),
         }).then(response => response.json()).then(response => response.people).then(async(response)=>{
             const filtered_people = await responseParser(response);
+            console.log("PPL : ", filtered_people.length);
             for(let j=0; j<filtered_people.length; j++){
+                const _person_ = peopleModal.create({orderId:id,data:filtered_people[j]});
                 if(filtered_people[j].possibleEmails){
-                    if(verifyQueue.length < 4800){
+                    if(verifyQueue.length < 49900){
                         verifyQueue.push(...filtered_people[j].possibleEmails);
                     }else{
                         batchEmailVerifier(verifyQueue);
@@ -78,18 +81,6 @@ const startOrderHelper = async (nop , apiRequestBody , id)=>{
                 }
             }
             return filtered_people;
-        }).then(async (filtered_people) => {
-            console.log("PPL : ", filtered_people.length);
-            const _order = await orderModal.findById(id);
-            let data = _order.data;
-            //push people in data
-            for(let i=0; i<filtered_people.length;i++){
-                data.push(filtered_people[i]);
-            }
-            const _order_ = await orderModal.findByIdAndUpdate(id, {data:data}, {
-                runValidators: true,
-                useFindAndModify: false,
-            });
         }).catch(error => {
             console.error(error);
         });
@@ -143,55 +134,51 @@ exports.startOrder = catchAsyncErrors(async (req, res, next) => {
         success: true
     })
 });
-
-const generateCSVHelper = catchAsyncErrors(async (id)=>{
-    const iniTime = Date.now();
-    const order = await orderModal.findById(id);
-    let dataLen = order.data.length;
+let generateTasksRemaining = {};
+const generateCSVWriteData = async(id,iniTime)=>{
+    if(generateTasksRemaining[id] != 0){
+        console.log(`${generateTasksRemaining[id]} tasks remaining for order id : ${id}`);
+        let x = 10*1000 + await Math.floor(Math.random() * 10)
+        setTimeout(()=>{generateCSVWriteData(id,iniTime)},x);
+        return;
+    }
+    delete generateTasksRemaining[id];
+    const people = await peopleModal.find({orderId:id});
+    let dataLen = people.length;
     let org_fetch_queue = []
     let organisations = {}
-    const result = [
-    ]
-
+    const result = []
     for(let i=0; i<dataLen; i++){
-        if(!order.data[i].organization){
+        console.log(i);
+        if(!people[i].data.organization){
             continue;
         }
         const resultDoc = {
-            id : order.data[i].id,
-            first_name : order.data[i].first_name,
-            last_name : order.data[i].last_name,
-            title: order.data[i].title,
-            city : order.data[i].city,
-            state : order.data[i].state,
-            country : order.data[i].country,
-            linkedin_url : order.data[i].linkedin_url,
-            headline : order.data[i].headline,
-            organization_domain : order.data[i].organization.primary_domain,
-            organization_name : order.data[i].organization.name,
-            organization_founded_year : order.data[i].organization.founded_year,
-            organization_phone : order.data[i].organization.phone,
-            organization_facebook_url : order.data[i].organization.facebook_url,
-            organization_linkedin_url : order.data[i].organization.linkedin_url,
-            organization_website_url : order.data[i].organization.website_url,
-            organization_twitter_url : order.data[i].organization.twitter_url,
-            organization_angellist_url : order.data[i].organization.angellist_url,
-            email : "",
-            status : false,
-            ESP:""
-        }
-        const emails = await emailModal.find({personId:order.data[i].id,orderId:id});
-        let max_score = 0;
-        for(let j=0; j<emails.length;j++){
-            if(emails[j].score >= max_score){
-                resultDoc.email = emails[j].email;
-                resultDoc.status = emails[j].score >= 60 ? true : false;
-                resultDoc.ESP = emails[j].ESP ? emails[j].ESP : null;
-                max_score = emails[j].score;
-            }
+            id : people[i].data.id,
+            first_name : people[i].data.first_name,
+            last_name : people[i].data.last_name,
+            email : people[i].data.email,
+            status : people[i].data.status,
+            ESP:people[i].data.ESP,
+            mx_record:people[i].data.mx_record,
+            title: people[i].data.title,
+            city : people[i].data.city,
+            state : people[i].data.state,
+            country : people[i].data.country,
+            linkedin_url : people[i].data.linkedin_url,
+            headline : people[i].data.headline,
+            organization_domain : people[i].data.organization.primary_domain,
+            organization_name : people[i].data.organization.name,
+            organization_founded_year : people[i].data.organization.founded_year,
+            organization_phone : people[i].data.organization.phone,
+            organization_facebook_url : people[i].data.organization.facebook_url,
+            organization_linkedin_url : people[i].data.organization.linkedin_url,
+            organization_website_url : people[i].data.organization.website_url,
+            organization_twitter_url : people[i].data.organization.twitter_url,
+            organization_angellist_url : people[i].data.organization.angellist_url,
         }
         // if(org_fetch_queue.length < 100){
-        //     org_fetch_queue.push(order.data[i].organization.id);
+        //     org_fetch_queue.push(order.data[i].organization.primary_domain);
         // }else{
         //     let link = "https://api.apollo.io/api/v1/mixed_companies/search";
         //     const result = await fetch(link , {
@@ -213,7 +200,7 @@ const generateCSVHelper = catchAsyncErrors(async (id)=>{
         //     org_fetch_queue.push(order.data[i].organization.id);
         // }
         // console.log(`${i} , ${organisations.length} , ${org_fetch_queue.length}`);
-        console.log(`${i}`);
+        // console.log(`${i}`);
         result.push(resultDoc);
     }
     const csv = await converter.json2csv(result);
@@ -226,6 +213,77 @@ const generateCSVHelper = catchAsyncErrors(async (id)=>{
     });
     const compTime = Date.now();
     console.log(`Generated CSV in ${compTime - iniTime} seconds`);
+}
+const bestEmailCalculator = async(id,person)=>{
+    //do task
+    if(person.data.email){
+        generateTasksRemaining[id] -= 1;
+        return;
+    }
+    const possibleEmails = person.data.possibleEmails;
+    const possibleEmailsObj = [];
+    let scoreFrequencyMap = {};
+    let max_score = 0;
+    let resultData = {
+        email:"",
+        status:false,
+        ESP : null,
+        mx_record : null,
+    }
+    if(possibleEmails){
+        for(let mailIndex = 0; mailIndex < possibleEmails.length; mailIndex++){
+            const mailObj = await emailModal.findOne({email:possibleEmails[mailIndex]});
+            if(!mailObj){
+                continue;
+            }
+            if(mailObj.score >= 60){
+                possibleEmailsObj.push(mailObj);
+            }
+            if(scoreFrequencyMap[mailObj.score]){
+                scoreFrequencyMap[mailObj.score] += 1;
+            }else{
+                scoreFrequencyMap[mailObj.score] = 1;
+            }
+            if(mailObj.score >= max_score){
+                resultData.email = mailObj.email;
+                resultData.status = mailObj.score >= 60 ? true : false;
+                resultData.ESP = mailObj.ESP ? mailObj.ESP : null;
+                resultData.mx_record = mailObj.mx_record;
+                max_score = mailObj.score;
+            }
+        }
+    }
+    if(scoreFrequencyMap[max_score] > 1 && max_score >= 60){
+        for(let mm = 0; mm < possibleEmailsObj.length; mm++){
+            if(possibleEmailsObj[mm].score == max_score && possibleEmailsObj[mm].is_catchall == false){
+                resultData.email = possibleEmailsObj[mm].email;
+                resultData.mx_record = possibleEmailsObj[mm].mx_record;
+            }
+        }
+    }
+    const data = person.data;
+    data.email = resultData.email;
+    data.status = resultData.status;
+    data.ESP = resultData.ESP;
+    data.mx_record = resultData.mx_record;
+    const result__ = await peopleModal.findByIdAndUpdate(person._id, {data:data}, {
+        runValidators: true,
+        useFindAndModify: false,
+    });
+    generateTasksRemaining[id] -= 1;
+}
+const generateCSVHelper = catchAsyncErrors(async (id)=>{
+    const iniTime = Date.now();
+    const people = await peopleModal.find({orderId:id});
+    let dataLen = people.length;
+    const result = []
+    generateTasksRemaining[id] = 0;
+    for(let i=0; i<dataLen;i++){
+        generateTasksRemaining[id] += 1;
+        bestEmailCalculator(id,people[i]);
+    }
+    let x = 40*1000 + await Math.floor(Math.random() * 10)
+    setTimeout(()=>{generateCSVWriteData(id,iniTime)},x);
 });
 
 exports.generateCSV = catchAsyncErrors(async (req, res, next) => {

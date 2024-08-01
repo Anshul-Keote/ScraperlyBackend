@@ -9,6 +9,11 @@ const emailSchema = new mongoose.Schema({
         type:Number,
         required:true,
     },
+    is_catchall:{
+        type:Boolean,
+        required:true,
+        default:false
+    },
     mx_record:{
         type:String,
         required:true,

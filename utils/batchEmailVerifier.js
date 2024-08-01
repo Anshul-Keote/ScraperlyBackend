@@ -27,11 +27,15 @@ const storeVerifiedEmails = async (id)=>{
     const processedEmail = {
         email:"",
         score:0,
+        is_catchall:false,
         mx_record:"",
     }
     for(let e = 0; e<processedEmails.length; e++){
         processedEmail.email = processedEmails[e].email;
         processedEmail.score = processedEmails[e].score;
+        if(processedEmails[e].isv_nocatchall){
+            processedEmail.is_catchall = !processedEmails[e].isv_nocatchall;
+        }
         if(processedEmails[e].mx_record){
             processedEmail.mx_record = processedEmails[e].mx_record;
         }else{
