@@ -29,6 +29,16 @@ const storeVerifiedEmails = async (id)=>{
         score:0,
         is_catchall:false,
         mx_record:"",
+        provider:null,
+        isv_format:false,
+        isv_domain:false,
+        isv_mx:false,
+        isv_noblock:false,
+        isv_nocatchall:false,
+        isv_nogeneric:false,
+        is_free:false,
+        result:"",
+        reason:""
     }
     for(let e = 0; e<processedEmails.length; e++){
         processedEmail.email = processedEmails[e].email;
@@ -41,6 +51,16 @@ const storeVerifiedEmails = async (id)=>{
         }else{
             processedEmail.mx_record = "None";
         }
+        processedEmail.provider = processedEmails[e].provider;
+        processedEmail.isv_format = processedEmails[e].isv_format;
+        processedEmail.isv_domain = processedEmails[e].isv_domain;
+        processedEmail.isv_mx = processedEmails[e].isv_mx;
+        processedEmail.isv_noblock = processedEmails[e].isv_noblock;
+        processedEmail.isv_nocatchall = processedEmails[e].isv_nocatchall;
+        processedEmail.isv_nogeneric = processedEmails[e].isv_nogeneric;
+        processedEmail.is_free = processedEmails[e].is_free;
+        processedEmail.result = processedEmails[e].result;
+        processedEmail.reason = processedEmails[e].reason;
         const _email_ = await emailModal.create(processedEmail);
     }
 }

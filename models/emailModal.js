@@ -19,6 +19,46 @@ const emailSchema = new mongoose.Schema({
         required:true,
         default:"None"
     },
+    provider:{
+        type:String,
+        default:null
+    },
+    isv_format:{
+        type:Boolean,
+        default:null
+    },
+    isv_domain:{
+        type:Boolean,
+        default:null
+    },
+    isv_mx:{
+        type:Boolean,
+        default:null
+    },
+    isv_noblock:{
+        type:Boolean,
+        default:null
+    },
+    isv_nocatchall:{
+        type:Boolean,
+        default:null
+    },
+    isv_nogeneric:{
+        type:Boolean,
+        default:null
+    },
+    is_free:{
+        type:Boolean,
+        default:null
+    },
+    result:{
+        type:String,
+        default:null
+    },
+    reason:{
+        type:String,
+        default:null
+    }
 });
 
 module.exports = mongoose.model("Emails", emailSchema);

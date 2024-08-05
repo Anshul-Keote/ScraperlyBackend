@@ -176,6 +176,16 @@ const generateCSVWriteData = async(id,iniTime)=>{
             organization_website_url : people[i].data.organization.website_url,
             organization_twitter_url : people[i].data.organization.twitter_url,
             organization_angellist_url : people[i].data.organization.angellist_url,
+            provider : people[i].data.email_stats.provider,
+            isv_format : people[i].data.email_stats.isv_format,
+            isv_domain : people[i].data.email_stats.isv_domain,
+            isv_mx : people[i].data.email_stats.isv_mx,
+            isv_noblock : people[i].data.email_stats.isv_noblock,
+            isv_nocatchall : people[i].data.email_stats.isv_nocatchall,
+            isv_nogeneric : people[i].data.email_stats.isv_nogeneric,
+            is_free : people[i].data.email_stats.is_free,
+            result : people[i].data.email_stats.result,
+            reason : people[i].data.email_stats.reason
         }
         // if(org_fetch_queue.length < 100){
         //     org_fetch_queue.push(order.data[i].organization.primary_domain);
@@ -229,6 +239,16 @@ const bestEmailCalculator = async(id,person)=>{
         status:false,
         ESP : null,
         mx_record : null,
+        provider:null,
+        isv_format:false,
+        isv_domain:false,
+        isv_mx:false,
+        isv_noblock:false,
+        isv_nocatchall:false,
+        isv_nogeneric:false,
+        is_free:false,
+        result:"",
+        reason:""
     }
     if(possibleEmails){
         for(let mailIndex = 0; mailIndex < possibleEmails.length; mailIndex++){
@@ -249,6 +269,16 @@ const bestEmailCalculator = async(id,person)=>{
                 resultData.status = mailObj.score >= 60 ? true : false;
                 resultData.ESP = mailObj.ESP ? mailObj.ESP : null;
                 resultData.mx_record = mailObj.mx_record;
+                resultData.provider = mailObj.provider;
+                resultData.isv_format = mailObj.isv_format;
+                resultData.isv_domain = mailObj.isv_domain;
+                resultData.isv_mx = mailObj.isv_mx;
+                resultData.isv_noblock = mailObj.isv_noblock;
+                resultData.isv_nocatchall = mailObj.isv_nocatchall;
+                resultData.isv_nogeneric = mailObj.isv_nogeneric;
+                resultData.is_free = mailObj.is_free;
+                resultData.result = mailObj.result;
+                resultData.reason = mailObj.reason;
                 max_score = mailObj.score;
             }
         }
@@ -258,6 +288,16 @@ const bestEmailCalculator = async(id,person)=>{
             if(possibleEmailsObj[mm].score == max_score && possibleEmailsObj[mm].is_catchall == false){
                 resultData.email = possibleEmailsObj[mm].email;
                 resultData.mx_record = possibleEmailsObj[mm].mx_record;
+                resultData.provider = possibleEmailsObj[mm].provider;
+                resultData.isv_format = possibleEmailsObj[mm].isv_format;
+                resultData.isv_domain = possibleEmailsObj[mm].isv_domain;
+                resultData.isv_mx = possibleEmailsObj[mm].isv_mx;
+                resultData.isv_noblock = possibleEmailsObj[mm].isv_noblock;
+                resultData.isv_nocatchall = possibleEmailsObj[mm].isv_nocatchall;
+                resultData.isv_nogeneric = possibleEmailsObj[mm].isv_nogeneric;
+                resultData.is_free = possibleEmailsObj[mm].is_free;
+                resultData.result = possibleEmailsObj[mm].result;
+                resultData.reason = possibleEmailsObj[mm].reason;
             }
         }
     }
@@ -266,6 +306,19 @@ const bestEmailCalculator = async(id,person)=>{
     data.status = resultData.status;
     data.ESP = resultData.ESP;
     data.mx_record = resultData.mx_record;
+    const email_stats = {
+        provider : resultData.provider,
+        isv_format : resultData.isv_format,
+        isv_domain : resultData.isv_domain,
+        isv_mx : resultData.isv_mx,
+        isv_noblock : resultData.isv_noblock,
+        isv_nocatchall : resultData.isv_nocatchall,
+        isv_nogeneric : resultData.isv_nogeneric,
+        is_free : resultData.is_free,
+        result : resultData.result,
+        reason : resultData.reason
+    }
+    data.email_stats = email_stats;
     const result__ = await peopleModal.findByIdAndUpdate(person._id, {data:data}, {
         runValidators: true,
         useFindAndModify: false,
