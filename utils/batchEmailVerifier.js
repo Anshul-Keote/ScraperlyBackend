@@ -14,7 +14,11 @@ const storeVerifiedEmails = async (id)=>{
     }).then(response => response.json()).then(async (response) => {
         if(response.finished_at){
             retry = false;
-            processedEmails = response.emails;
+            if(response.emails){
+                processedEmails = response.emails;
+            }else{
+                console.log(`No emails were in response of ${link}`);
+            }
         }
     }).catch(error => {
         console.log(error)
